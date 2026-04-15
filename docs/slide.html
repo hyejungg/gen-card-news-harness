@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>콘텐츠 자동화 사례로 보는 하네스 엔지니어링 실전</title>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+    <style>
+        /* Base Reset & Setup */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            padding: 20px 0;
+            min-height: 100vh;
+            display: grid;
+            gap: 20px;
+            place-items: center;
+            background: #1a1a1a;
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+
+        /* PDF 출력용 — 각 슬라이드를 한 페이지로 */
+        @page {
+            size: 1280px 720px;
+            margin: 0;
+        }
+        @media print {
+            html, body {
+                min-height: 0 !important;
+                height: auto !important;
+            }
+            body {
+                padding: 0 !important;
+                margin: 0 !important;
+                gap: 0 !important;
+                background: #000 !important;
+                display: block !important;
+            }
+            .slide-container {
+                page-break-after: always;
+                break-after: page;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                width: 1280px !important;
+                height: 720px !important;
+                margin: 0 !important;
+                display: block !important;
+            }
+            .slide-container:last-child {
+                page-break-after: auto !important;
+                break-after: auto !important;
+            }
+        }
+        
+        .slide-container {
+            position: relative;
+            width: 1280px;
+            height: 720px;
+            overflow: hidden;
+            background: linear-gradient(135deg, #0a0a0a 0%, #111111 50%, #0f172a 100%);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            color: #ffffff;
+        }
+
+        /* Common Visual Elements */
+        .background-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.03;
+            background-image: 
+                radial-gradient(circle at 25% 25%, #00d4aa 1px, transparent 1px),
+                radial-gradient(circle at 75% 75%, #00d4aa 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: 0;
+        }
+        
+        .glow-effect {
+            position: absolute;
+            top: 160px;
+            left: 240px;
+            width: 800px;
+            height: 400px;
+            background: radial-gradient(ellipse, rgba(0, 212, 170, 0.08) 0%, transparent 70%);
+            filter: blur(60px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Standard Slide Layouts */
+        .slide-content-wrapper {
+            position: relative;
+            z-index: 10;
+            padding: 50px 60px;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .slide-header {
+            margin-bottom: 40px;
+            width: 100%;
+        }
+
+        .slide-header h2 {
+            font-size: 42px;
+            font-weight: 700;
+            line-height: 1.3;
+            color: #ffffff;
+            letter-spacing: -0.02em;
+        }
+        
+        .slide-header h2 .highlight-text {
+            color: #00d4aa;
+        }
+
+        .content-area {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Slide 1 (Cover) Specifics */
+        .badge {
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 0 24px;
+            height: 44px;
+            background: rgba(0, 212, 170, 0.1);
+            border: 1px solid rgba(0, 212, 170, 0.3);
+            border-radius: 22px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: #00d4aa;
+            font-size: 16px;
+            font-weight: 500;
+            z-index: 10;
+        }
+        
+        .main-title-container {
+            position: absolute;
+            top: 220px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            z-index: 10;
+        }
+        
+        .title-text {
+            font-size: 64px;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1.25;
+            letter-spacing: -0.02em;
+            margin-bottom: 24px;
+        }
+        
+        .title-highlight {
+            color: #00d4aa;
+            font-weight: 800;
+        }
+        
+        .subtitle {
+            font-size: 28px;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 400;
+        }
+        
+        .subtitle-highlight {
+            color: #00d4aa;
+            font-weight: 500;
+        }
+        
+        .meta-info-container {
+            position: absolute;
+            top: 500px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 0 32px;
+            height: 56px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 28px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 10;
+        }
+
+        .meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 15px;
+            line-height: 1;
+            color: rgba(255, 255, 255, 0.7);
+            white-space: nowrap;
+        }
+
+        .meta-icon {
+            color: #00d4aa;
+            font-size: 13px;
+            width: 16px;
+            text-align: center;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .meta-label {
+            color: rgba(255, 255, 255, 0.45);
+            font-weight: 400;
+            margin-right: 2px;
+        }
+        .meta-value {
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 500;
+        }
+        .separator {
+            width: 1px;
+            height: 16px;
+            background: rgba(255, 255, 255, 0.15);
+            flex-shrink: 0;
+        }
+
+        /* Two Column Layout */
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            height: 100%;
+        }
+
+        .two-column.stacked {
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .two-column.stacked .box-panel {
+            padding: 22px 36px;
+        }
+
+        .two-column.stacked .box-panel h3 {
+            font-size: 22px;
+            margin-bottom: 14px;
+        }
+
+        .two-column.stacked .box-panel.highlight-panel h3 {
+            margin-bottom: 12px !important;
+        }
+
+        .two-column.stacked ul.styled-list li {
+            margin-bottom: 10px;
+            font-size: 17px;
+        }
+
+        .two-column.stacked ul.styled-list li:last-child {
+            margin-bottom: 0;
+        }
+
+        .two-column.stacked ul.styled-list .flow-chain {
+            margin-top: 6px;
+            font-size: 14.5px;
+            line-height: 1.6;
+        }
+
+        .two-column.stacked ul.styled-list .sub-list {
+            margin-top: 6px;
+        }
+
+        .two-column.stacked ul.styled-list .sub-list li {
+            font-size: 14.5px;
+            margin-bottom: 0;
+        }
+
+        .two-column.stacked .text-large {
+            font-size: 28px;
+            line-height: 1.4;
+        }
+
+        #slide2 .slide-header {
+            margin-bottom: 24px;
+        }
+
+        .box-panel {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .box-panel.highlight-panel {
+            background: rgba(0, 212, 170, 0.05);
+            border-color: rgba(0, 212, 170, 0.3);
+            box-shadow: 0 0 40px rgba(0, 212, 170, 0.05);
+        }
+
+        /* Typography Styles */
+        h3 {
+            font-size: 28px;
+            margin-bottom: 24px;
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        .text-body {
+            font-size: 20px;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .text-large {
+            font-size: 38px;
+            line-height: 1.4;
+            font-weight: 700;
+            color: #ffffff;
+            word-break: keep-all;
+        }
+
+        ul.styled-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        ul.styled-list li {
+            position: relative;
+            padding-left: 24px;
+            margin-bottom: 16px;
+            font-size: 18px;
+            line-height: 1.5;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        ul.styled-list li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: #00d4aa;
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        ul.styled-list .flow-chain {
+            display: block;
+            margin-top: 10px;
+            font-size: 16px;
+            line-height: 1.7;
+            color: rgba(255, 255, 255, 0.7);
+            word-break: keep-all;
+        }
+
+        ul.styled-list .flow-chain .flow-arrow {
+            color: #00d4aa;
+            margin: 0 4px;
+            font-weight: 600;
+        }
+
+        ul.styled-list .sub-list {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0 0 0;
+        }
+
+        ul.styled-list .sub-list li {
+            font-size: 16px;
+            line-height: 1.5;
+            color: rgba(255, 255, 255, 0.65);
+            padding-left: 20px;
+            margin-bottom: 0;
+        }
+
+        ul.styled-list .sub-list li::before {
+            content: '–';
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 16px;
+            font-weight: 400;
+        }
+
+        code {
+            font-family: 'SF Mono', Menlo, Monaco, 'Courier New', monospace;
+            font-size: 0.88em;
+            padding: 2px 6px;
+            background: rgba(0, 212, 170, 0.1);
+            color: #00d4aa;
+            border-radius: 4px;
+            border: 1px solid rgba(0, 212, 170, 0.2);
+            white-space: nowrap;
+        }
+
+        /* Tables */
+        .dark-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            border-style: hidden;
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+        }
+        
+        .dark-table th {
+            background: rgba(255, 255, 255, 0.05);
+            color: #ffffff;
+            font-weight: 700;
+            padding: 16px 24px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 20px;
+        }
+        
+        .dark-table td {
+            padding: 18px 24px;
+            color: rgba(255, 255, 255, 0.8);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 18px;
+            line-height: 1.5;
+        }
+        
+        .dark-table tr:last-child td { border-bottom: none; }
+        
+        .dark-table tr.highlight-row { background: rgba(0, 212, 170, 0.1); }
+        .dark-table tr.highlight-row td { color: #00d4aa; font-weight: 500; }
+
+        .fire-icon { margin-right: 8px; font-size: 18px; }
+
+        .table-subtitle {
+            font-size: 16px;
+            color: #00d4aa;
+            margin-top: 16px;
+            text-align: right;
+        }
+
+        /* Quote / Callout box */
+        .quote-box {
+            margin-top: auto;
+            padding: 24px 32px;
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 4px solid #00d4aa;
+            border-radius: 0 8px 8px 0;
+            font-size: 24px;
+            font-weight: 500;
+            color: #ffffff;
+            font-style: italic;
+        }
+
+        a.source-link {
+            color: inherit;
+            text-decoration: none;
+            border-bottom: 1px dashed rgba(0, 212, 170, 0.5);
+            padding-bottom: 1px;
+            transition: border-color 0.2s, color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        a.source-link:hover {
+            border-bottom-color: #00d4aa;
+            color: #00d4aa;
+        }
+
+        a.source-link .fa-external-link-alt {
+            font-size: 0.62em;
+            opacity: 0.7;
+        }
+
+        /* Code & Folder Structure */
+        .code-container {
+            background: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        .code-header {
+            background: #2d2d2d;
+            padding: 12px 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .code-content {
+            padding: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #e4e4e4;
+            flex-grow: 1;
+            white-space: pre;
+        }
+
+        .code-footer {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 16px 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: #00d4aa;
+            border-top: 1px solid #333;
+        }
+
+        .keyword { color: #c678dd; }
+        .function { color: #61afef; }
+        .string { color: #98c379; }
+        .comment { color: #5c6370; font-style: italic; }
+
+        .alert-box {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #f87171;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 20px;
+            font-weight: 500;
+            margin-top: 24px;
+        }
+
+        /* Slide 6 (Core Message) Specifics */
+        .center-message-layout {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+        }
+
+        .mega-title {
+            font-size: 120px;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: -0.04em;
+            line-height: 1;
+            text-align: center;
+            margin: 0;
+        }
+
+        .huge-quote {
+            font-size: 36px;
+            font-weight: 500;
+            line-height: 1.5;
+            color: rgba(255, 255, 255, 0.92);
+            margin: 0 auto 48px;
+            max-width: 960px;
+            width: 90%;
+            text-align: left;
+        }
+
+        .huge-quote .quote-line {
+            margin-bottom: 28px;
+            display: flex;
+            align-items: baseline;
+            flex-wrap: wrap;
+            column-gap: 16px;
+        }
+
+        .huge-quote .quote-line:last-child {
+            margin-bottom: 0;
+        }
+
+        .huge-quote .quote-line strong {
+            color: #ffffff;
+            font-weight: 700;
+            min-width: 180px;
+            flex-shrink: 0;
+        }
+
+        .huge-quote .quote-line .eq {
+            color: rgba(255, 255, 255, 0.35);
+            font-weight: 300;
+            flex-shrink: 0;
+        }
+
+        .huge-quote .accent {
+            color: #00d4aa;
+            font-weight: 600;
+        }
+
+        .sub-message {
+            font-size: 20px;
+            color: rgba(255, 255, 255, 0.5);
+            max-width: 960px;
+            width: 90%;
+            line-height: 1.7;
+            word-break: keep-all;
+            text-align: left;
+            margin: 0 auto;
+            padding-top: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Slide 7 (3-Block Layout) Specifics */
+        .three-block {
+            display: grid;
+            grid-template-columns: 1.2fr 1.5fr 1.3fr;
+            gap: 30px;
+            height: 100%;
+        }
+
+        .block-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .block-card h4 {
+            font-size: 20px;
+            color: #ffffff;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .block-card h4 i { color: #00d4aa; }
+
+        .ascii-diagram {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #00d4aa;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 24px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 212, 170, 0.2);
+            white-space: pre;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-grow: 1;
+        }
+
+        /* Slide 7: 2 열 레이아웃 (Block 2 는 우측 전체 높이) */
+        #slide7 .slide-header { margin-bottom: 20px; }
+        #slide7 .three-block {
+            grid-template-columns: 1fr 1.35fr;
+            grid-template-rows: auto 1fr;
+            gap: 14px;
+        }
+        #slide7 .block-card {
+            padding: 14px 18px;
+        }
+        #slide7 .block-card h4 {
+            font-size: 18px;
+            margin-bottom: 12px;
+        }
+        #slide7 .block-card:nth-child(1) { grid-column: 1; grid-row: 1; }
+        #slide7 .block-card:nth-child(2) { grid-column: 2; grid-row: 1 / span 2; }
+        #slide7 .block-card:nth-child(3) { grid-column: 1; grid-row: 2; }
+
+        /* 세로 플로우 다이어그램 — flex 해제해서 pre 줄바꿈 복원 */
+        .ascii-diagram.flow-v {
+            display: block;
+            font-size: 12px;
+            line-height: 1.42;
+            color: rgba(255, 255, 255, 0.85);
+            text-align: left;
+            padding: 16px 18px;
+            border-color: rgba(255, 255, 255, 0.12);
+            overflow: hidden;
+        }
+        .ascii-diagram.flow-v .flow-agent   { color: #00d4aa; font-weight: 700; }
+        .ascii-diagram.flow-v .flow-human   { color: #f59e0b; font-weight: 600; }
+        .ascii-diagram.flow-v .flow-example { color: rgba(255, 255, 255, 0.4); font-style: italic; }
+        .ascii-diagram.flow-v .flow-output  { color: #61afef; font-weight: 600; }
+        .ascii-diagram.flow-v .flow-arg     { color: #f87171; font-weight: 600; }
+
+        /* Slide 7 Block 3 diff-list — styled-list와 동일 베이스 */
+        .diff-list li {
+            font-size: 15px !important;
+            line-height: 1.6 !important;
+            margin-bottom: 12px !important;
+            padding-left: 22px !important;
+        }
+        .diff-list li:last-child { margin-bottom: 0 !important; }
+        .diff-list code {
+            font-size: 0.92em;
+            padding: 1px 5px;
+        }
+
+        /* Slide 8 (Design Points Mapping) Specifics */
+        .mapping-table {
+            font-size: 18px;
+        }
+        .mapping-table td {
+            vertical-align: top;
+            padding: 14px 24px;
+        }
+        .mapping-table .sub-detail {
+            display: inline-block;
+            font-size: 15.5px;
+            line-height: 1.7;
+            color: rgba(255, 255, 255, 0.7);
+            padding-left: 4px;
+        }
+        .mapping-table .sub-detail strong {
+            color: rgba(255, 255, 255, 0.92);
+            font-weight: 600;
+        }
+
+        /* Slide 10 (When to use) — 테이블 셀 컴팩트 */
+        .when-table th,
+        .when-table td {
+            padding: 12px 24px !important;
+            font-size: 17px !important;
+        }
+
+        /* Slide 11 (References) */
+        .reference-list > li {
+            font-size: 20px;
+            margin-bottom: 22px;
+        }
+        .reference-list .sub-list li {
+            font-size: 17px;
+            padding: 4px 0 4px 20px;
+        }
+        .reference-list .ref-note {
+            color: rgba(255, 255, 255, 0.55);
+            font-style: italic;
+        }
+
+        /* Slide 10 (Q&A) Specifics */
+        .qa-layout {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            width: 100%;
+        }
+        .qa-title {
+            font-size: 80px;
+            font-weight: 900;
+            color: #00d4aa;
+            margin-bottom: 60px;
+            letter-spacing: 2px;
+        }
+        .qa-list {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            width: 80%;
+            max-width: 800px;
+        }
+        .qa-item {
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 4px solid #00d4aa;
+            padding: 24px 32px;
+            border-radius: 0 8px 8px 0;
+            font-size: 24px;
+            color: #ffffff;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+
+<!-- SLIDE 1: Cover -->
+<div class="slide-container" id="slide1">
+    <div class="background-pattern"></div>
+    <div class="glow-effect"></div>
+    <div class="badge">
+        <span>지난 발표 "Codex/Claude Code 문서로 보는 Harness Engineering" 후속편</span>
+    </div>
+    <div class="main-title-container">
+        <h1 class="title-text">
+            콘텐츠 생성 자동화 사례로 보는<br/>
+            <span class="title-highlight">하네스 엔지니어링 실전</span>
+        </h1>
+        <div class="subtitle">
+            <span class="subtitle-highlight">코드 기반 에이전트</span> vs 
+            <span class="subtitle-highlight">하네스 기반 에이전트</span>, 뭐가 다른가
+        </div>
+    </div>
+    <div class="meta-info-container">
+        <div class="meta-item">
+            <i class="fas fa-user meta-icon"></i>
+            <span class="meta-label">발표자:</span>
+            <span class="meta-value">김혜정 (molly.ouo)</span>
+        </div>
+        <div class="separator"></div>
+        <div class="meta-item">
+            <i class="fas fa-book meta-icon"></i>
+            <span class="meta-label">스터디:</span>
+            <span class="meta-value">GAI 스터디</span>
+        </div>
+        <div class="separator"></div>
+        <div class="meta-item">
+            <i class="fas fa-calendar meta-icon"></i>
+            <span class="meta-label">날짜:</span>
+            <span class="meta-value">2026.04.16</span>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 2: Recap & Today's Question -->
+<div class="slide-container" id="slide2">
+    <div class="background-pattern"></div>
+    <div class="slide-content-wrapper">
+        <div class="slide-header">
+            <h2>지난 발표: <span class="highlight-text">"하네스란 무엇인가"</span></h2>
+        </div>
+        <div class="content-area">
+            <div class="two-column stacked">
+                <div class="box-panel">
+                    <h3>지난 발표 요약</h3>
+                    <ul class="styled-list">
+                        <li>
+                            <strong>AI 흐름의 변화</strong>
+                            <span class="flow-chain">
+                                프롬프트 엔지니어링
+                                <span class="flow-arrow">→</span>
+                                오케스트레이션과 구조 선택의 중요성 부각
+                                <span class="flow-arrow">→</span>
+                                에이전트 등장 · 상태 관리 · 도구 조합 · 평가 루프 설계
+                                <span class="flow-arrow">→</span>
+                                직접 수행보다 환경 · 규칙 · 피드백 구조 설계
+                            </span>
+                        </li>
+                        <li>
+                            <strong>하네스</strong>란 특정 일을 잘 수행하기 위해 어떻게 실행·통제할지(운영)에 대해 설계·관리하는 것
+                            <ul class="sub-list">
+                                <li>지침서(<code>CLAUDE.md</code>, <code>AGENTS.md</code>), MCP, Skills, Agent 등을 조합</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+                <div class="box-panel highlight-panel" style="text-align: center;">
+                    <h3 style="color: #00d4aa; margin-bottom: 40px;">오늘의 질문</h3>
+                    <p class="text-large">
+                        같은 <span style="color:#00d4aa;">"콘텐츠 생성 자동화"</span>를<br>
+                        <span style="color:#00d4aa;">코드 기반</span>으로 구성하는 것과 <span style="color:#00d4aa;">하네스 기반</span>으로 구성하는 것의<br>
+                        차이는 무엇일까?
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 3: Two Cases Introduction -->
+<div class="slide-container" id="slide3">
+    <div class="background-pattern"></div>
+    <div class="slide-content-wrapper">
+        <div class="slide-header">
+            <h2>같은 "콘텐츠 자동화", <span class="highlight-text">완전히 다른 접근</span></h2>
+        </div>
+        <div class="content-area">
+            <table class="dark-table">
+                <thead>
+                    <tr>
+                        <th style="width: 20%;">구분</th>
+                        <th style="width: 40%;">사례 A (jay.pm.ai)</th>
+                        <th style="width: 40%; color: #00d4aa;">사례 B (<a class="source-link" href="https://zoey.day/claude-code-agent-product-page-localization" target="_blank" rel="noopener">zoey.day<i class="fas fa-external-link-alt"></i></a>)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>도메인</strong></td>
+                        <td>카드뉴스 자동화</td>
+                        <td>상세페이지 현지화</td>
+                    </tr>
+                    <tr>
+                        <td><strong>입력 / 출력</strong></td>
+                        <td>페르소나 + 욕구 ➔ 카드뉴스 5장 세트</td>
+                        <td>Amazon 제품 페이지 ➔ 다국어 상세페이지</td>
+                    </tr>
+                    <tr>
+                        <td><strong>접근 방식</strong></td>
+                        <td>코드 기반 (Python)</td>
+                        <td>하네스 기반 (.md)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>핵심 구조</strong></td>
+                        <td><code>*_agent.py</code> × 4 + <code>orchestrator.py</code></td>
+                        <td>에이전트 6개(.md) + 스킬 6개 + MCP</td>
+                    </tr>
+                    <tr>
+                        <td><strong>외부 연동</strong></td>
+                        <td>gspread / OpenAI 직접 호출</td>
+                        <td>MCP 서버 경유</td>
+                    </tr>
+                    <tr>
+                        <td><strong>품질 보장</strong></td>
+                        <td>자기 검증 루프</td>
+                        <td>독립 QA 에이전트</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 4: Core Comparison Table -->
+<div class="slide-container" id="slide4">
+    <div class="background-pattern"></div>
+    <div class="slide-content-wrapper">
+        <div class="slide-header">
+            <h2><span class="highlight-text">7가지 관점</span>으로 본 두 방식의 차이</h2>
+        </div>
+        <div class="content-area">
+            <table class="dark-table" style="font-size: 16px;">
+                <thead>
+                    <tr>
+                        <th style="width: 20%;">관점</th>
+                        <th style="width: 40%;">jay.pm.ai (코드 기반)</th>
+                        <th style="width: 40%;">zoey.day (하네스 기반)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>에이전트 정의</strong></td>
+                        <td>Python 파일이 곧 에이전트</td>
+                        <td>.md로 역할만 정의, 코드는 런타임에 작성</td>
+                    </tr>
+                    <tr>
+                        <td><strong>프롬프트 관리</strong></td>
+                        <td>prompts/ 폴더에 텍스트 분리</td>
+                        <td>skills/references/에 통합 (Progressive)</td>
+                    </tr>
+                    <tr class="highlight-row">
+                        <td><strong><span class="fire-icon">🔥</span>품질 보장</strong></td>
+                        <td>자기 검증 루프</td>
+                        <td>QA 에이전트가 독립 검수</td>
+                    </tr>
+                    <tr>
+                        <td><strong>확장성</strong></td>
+                        <td>새 기능 = 새 .py + orchestrator 수정</td>
+                        <td>새 기능 = 새 .md + 오케스트레이터 스킬 수정</td>
+                    </tr>
+                    <tr class="highlight-row">
+                        <td><strong><span class="fire-icon">🔥</span>외부 연동</strong></td>
+                        <td>gspread/openai 직접 호출</td>
+                        <td>MCP 서버로 추상화</td>
+                    </tr>
+                    <tr>
+                        <td><strong>비개발자 수정</strong></td>
+                        <td>코드를 읽어야 가능</td>
+                        <td>마크다운만 편집하면 됨</td>
+                    </tr>
+                    <tr class="highlight-row">
+                        <td><strong><span class="fire-icon">🔥</span>코드 관리</strong></td>
+                        <td>scripts/ 유지 (의존성·버전·버그)</td>
+                        <td>코드 파일 0개</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="table-subtitle">🔥 = 주요 차이</div>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 5: Code vs .md -->
+<div class="slide-container" id="slide5">
+    <div class="background-pattern"></div>
+    <div class="slide-content-wrapper">
+        <div class="slide-header">
+            <h2><span class="highlight-text">"에이전트를 만든다"</span>는 표현이 의미하는 차이</h2>
+        </div>
+        <div class="content-area">
+            <div class="two-column" style="margin-bottom: 24px; height: 350px;">
+                <!-- Left Code -->
+                <div class="code-container">
+                    <div class="code-header">
+                        <span>thumbnail_agent.py (발췌)</span>
+                        <span>Python</span>
+                    </div>
+                    <div class="code-content"><span class="keyword">def</span> <span class="function">generate_thumbnail</span>(persona, desire):
+    prompt = load_prompt(<span class="string">"thumbnail.txt"</span>).format(
+        persona=persona, desire=desire
+    )
+    resp = openai.chat.completions.create(
+        model=<span class="string">"gpt-4o"</span>,
+        messages=[{<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: prompt}]
+    )
+    copy = resp.choices[0].message.content
+    <span class="keyword">if not</span> validate_rules(copy):
+        <span class="keyword">return</span> retry_with_feedback(copy)
+    <span class="keyword">return</span> copy</div>
+                    <div class="code-footer">agents/*.py + prompts/*.txt + orchestrator.py</div>
+                </div>
+
+                <!-- Right Markdown -->
+                <div class="code-container" style="border-color: rgba(0, 212, 170, 0.4);">
+                    <div class="code-header" style="background: rgba(0, 212, 170, 0.1);">
+                        <span style="color: #00d4aa;">.claude/agents/thumbnail-writer.md</span>
+                        <span>Markdown</span>
+                    </div>
+                    <div class="code-content" style="color: rgba(255,255,255,0.9);"><span style="color: #61afef; font-weight: bold;">## 역할</span>
+5개 마케팅 앵글별 후킹 카피를 작성한다.
+
+<span style="color: #61afef; font-weight: bold;">## 사용 스킬</span>
+- generate-thumbnail: 앵글별 헤드라인 3줄 + 칩태그 2개
+- evaluate-copy: 규칙 검증 + 자기 평가 (10점)
+
+<span style="color: #61afef; font-weight: bold;">## 품질 기준</span>
+7점 미만이면 최대 3회 재작성</div>
+                    <div class="code-footer">CLAUDE.md + agents/*.md + skills/ + config.yaml</div>
+                </div>
+            </div>
+            
+            <div class="alert-box">
+                같은 일을 하는 두 레포. 우측(하네스)은 실행 가능한 Python 파일이 0개.
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 6: Core Message -->
+<div class="slide-container" id="slide6">
+    <div class="background-pattern"></div>
+    <div class="glow-effect" style="top: 50%; left: 50%; transform: translate(-50%, -50%);"></div>
+    <div class="slide-content-wrapper">
+        <div class="content-area center-message-layout">
+            <div class="huge-quote">
+                <div class="quote-line">
+                    <strong>코드 기반</strong><span class="eq">=</span>내가 직접 코드를 짜서 <span class="accent">에이전트를 만드는 것</span>
+                </div>
+                <div class="quote-line">
+                    <strong>하네스 기반</strong><span class="eq">=</span>에이전트가 일할 <span class="accent">환경과 규칙을 설계하는 것</span>
+                </div>
+            </div>
+            <div class="sub-message">
+                지난 발표에서 말한 "인간의 역할이 '직접 수행'에서 '환경·규칙·피드백 구조 설계'로 이동"이<br>
+                실제로 어떻게 나타나는지를 보여주는 구체적인 사례.
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 7: Reconstruction 3 Block -->
+<div class="slide-container" id="slide7">
+    <div class="background-pattern"></div>
+    <div class="slide-content-wrapper">
+        <div class="slide-header">
+            <h2>재구성 결과를 <span class="highlight-text">세 가지 관점</span>으로 소개</h2>
+        </div>
+        <div class="content-area">
+            <div class="three-block">
+                <!-- Block 1 -->
+                <div class="block-card">
+                    <h4><i class="fas fa-folder-tree"></i> 프로젝트 구조</h4>
+                    <div class="code-content" style="padding:0; font-size: 12.5px; line-height: 1.5; color: rgba(255,255,255,0.75);"><span style="color:#00d4aa">card-news-agent/</span>  <span class="comment">← 코드 0개</span>
+├── CLAUDE.md     <span class="comment">← 진입점</span>
+├── config.yaml
+├── <span style="color:#61afef">.claude/</span>
+│   ├── <span style="color:#e5c07b">agents/</span>   <span class="comment">(3개 .md)</span>
+│   │   ├── thumbnail-writer
+│   │   ├── body-writer
+│   │   └── image-renderer
+│   └── <span style="color:#e5c07b">skills/</span>   <span class="comment">(5개)</span>
+│       ├── orchestrator
+│       ├── generate-thumbnail
+│       ├── evaluate-copy <span style="color:#f87171">🔥</span>
+│       └── generate-image</div>
+                </div>
+
+                <!-- Block 2 -->
+                <div class="block-card">
+                    <h4><i class="fas fa-project-diagram"></i> 전체 흐름</h4>
+                    <div class="ascii-diagram flow-v">페르소나 + 욕구 입력
+<span class="flow-example">(클로드코드에서 "카드 뉴스 만들어줘 --persona '20대 대학생' --desire 'AI를 더 잘 활용하고 싶다.'")</span>
+        │
+        ▼
+  <span class="flow-agent">thumbnail-writer</span>     5개 앵글별 헤드라인 생성 + 자기 검증 루프
+        │
+  <span class="flow-human">[구글시트 승인 대기]</span>  ← Human-in-the-loop (<span class="flow-arg">--auto</span> 로 건너뛰기)
+        │
+        ▼
+    <span class="flow-agent">body-writer</span>        본문 3장 + CTA 생성 + 톤 일관성 검증
+        │
+  <span class="flow-human">[구글시트 승인 대기]</span>
+        │
+        ▼
+   <span class="flow-agent">image-renderer</span>      Gemini 배경이미지 + 카드 5장 PNG 렌더링
+        │
+        ▼
+   <span class="flow-output">output/{날짜}_{페르소나}/</span>
+   ├── 01_thumbnail.png    ├── 03_body2.png    └── 05_cta.png
+   ├── 02_body1.png        └── 04_body3.png</div>
+                </div>
+
+                <!-- Block 3 -->
+                <div class="block-card">
+                    <h4><i class="fas fa-lightbulb"></i> 기존과의 차이점</h4>
+                    <ul class="styled-list diff-list">
+                        <li>기존 Python 기반 에이전트는 <strong>검증 로직이 에이전트마다 코드로 중복 선언</strong></li>
+                        <li>하네스 방식은 <code>evaluate-copy</code>라는 <code>SKILL</code>을 정의해 <strong>썸네일 작성자와 본문 작성자가 동일한 스킬을 공유하여 검증</strong></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 8: Design Points Mapping -->
+<div class="slide-container" id="slide8">
+    <div class="background-pattern"></div>
+    <div class="slide-content-wrapper">
+        <div class="slide-header">
+            <h2><span class="highlight-text">Agent Engineering</span> 5가지 설계 포인트</h2>
+        </div>
+        <div class="content-area">
+            <table class="dark-table mapping-table">
+                <thead>
+                    <tr>
+                        <th style="width: 30%;">설계 포인트</th>
+                        <th style="width: 70%;">이번 사례 구현</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="color:#00d4aa;"><strong>1) 작업 단위</strong></td>
+                        <td>
+                            페르소나+욕구 1쌍 = 1 세트 (썸네일 · 본문 3 · CTA)<br>
+                            <span class="sub-detail">산출물과 로그는 <code>output/{날짜}_{페르소나}/</code> 폴더에 함께 묶어 관리</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="color:#00d4aa;"><strong>2) 실행 권한</strong></td>
+                        <td>
+                            에이전트가 로컬에서 <code>pip install</code> · Playwright · 파일 I/O 까지 자동 수행<br>
+                            <span class="sub-detail">외부 시스템(구글 시트)은 <strong>서비스 계정</strong>으로 제한된 권한만 허용</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="color:#00d4aa;"><strong>3) 분업</strong></td>
+                        <td>
+                            각 작업을 가장 잘하는 도구에 위임<br>
+                            <span class="sub-detail">· <strong>텍스트 카피 생성</strong> → Claude (창의 작업)</span><br>
+                            <span class="sub-detail">· <strong>글자수 · 금칙어 규칙 검증</strong> → Python (결정적 작업)</span><br>
+                            <span class="sub-detail">· <strong>배경이미지 생성</strong> → Gemini Imagen (이미지 특화 모델)</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="color:#00d4aa;"><strong>4) 실패 복구</strong></td>
+                        <td>
+                            자기 평가 <strong>7점 미만</strong> → 피드백과 함께 재생성 (최대 3회)<br>
+                            <span class="sub-detail">3회 모두 미달이면 최고 점수 버전 채택 → 구글 시트에서 Human이 최종 승인</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="color:#00d4aa;"><strong>5) 측정 · 비용</strong></td>
+                        <td>
+                            단계별 자기 평가 점수 · 재시도 횟수를 로그로 기록<br>
+                            <span class="sub-detail">세트당 API 비용 <strong>약 $0.025</strong>로 예측 가능 · 이상 시 상한 차단</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 9: Results (이미지는 별도 띄워서 공유) -->
+<div class="slide-container" id="slide9">
+    <div class="background-pattern"></div>
+    <div class="glow-effect" style="top: 50%; left: 50%; transform: translate(-50%, -50%);"></div>
+    <div class="slide-content-wrapper">
+        <div class="content-area center-message-layout">
+            <h1 class="mega-title"><span class="title-highlight">결과물</span> 확인</h1>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 10: When to use -->
+<div class="slide-container" id="slide10">
+    <div class="background-pattern"></div>
+    <div class="slide-content-wrapper">
+        <div class="slide-header" style="margin-bottom: 20px;">
+            <h2>언제 어느 쪽을 써야 할까?</h2>
+        </div>
+        <div class="content-area" style="display: flex; flex-direction: column; justify-content: space-between;">
+
+            <table class="dark-table when-table" style="margin-bottom: 18px;">
+                <thead>
+                    <tr>
+                        <th style="width: 50%;">상황 (변동성 기준)</th>
+                        <th style="width: 50%;">유리한 접근 방식</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>고정 파이프라인 + 높은 처리량</td>
+                        <td style="color: #61afef; font-weight: 500;"><i class="fas fa-code"></i> 코드 기반</td>
+                    </tr>
+                    <tr class="highlight-row">
+                        <td>자주 바뀌는 워크플로우</td>
+                        <td><i class="fas fa-project-diagram"></i> 하네스 기반</td>
+                    </tr>
+                    <tr class="highlight-row">
+                        <td>비개발자 직접 튜닝 필요</td>
+                        <td><i class="fas fa-project-diagram"></i> 하네스 기반</td>
+                    </tr>
+                    <tr>
+                        <td>엄격한 SLA / 레거시 연동</td>
+                        <td style="color: #61afef; font-weight: 500;"><i class="fas fa-code"></i> 코드 기반</td>
+                    </tr>
+                    <tr class="highlight-row">
+                        <td>빠른 실험 · 프로토타이핑</td>
+                        <td><i class="fas fa-project-diagram"></i> 하네스 기반</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div style="text-align: center; margin-top: auto;">
+                <h1 style="font-size: 54px; color: #00d4aa; margin-bottom: 14px; font-weight: 900; letter-spacing: -1px;">Humans steer. Agents execute.</h1>
+                <p style="font-size: 19px; color: rgba(255,255,255,0.8); line-height: 1.55; word-break: keep-all; width: 85%; margin: 0 auto;">
+                    코드로 풀면 <code>thumbnail_agent.py</code>를 짜야 하지만,<br>
+                    하네스로 풀면 <code>thumbnail-writer.md</code>에 <strong>역할만 정의</strong>하면 된다.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 11: References -->
+<div class="slide-container" id="slide11">
+    <div class="background-pattern"></div>
+    <div class="slide-content-wrapper">
+        <div class="slide-header">
+            <h2>참고</h2>
+        </div>
+        <div class="content-area">
+            <ul class="styled-list reference-list">
+                <li>
+                    <strong>zoey.day 의 자동화 하네스 아티클</strong>
+                    <ul class="sub-list">
+                        <li>1편 — <a class="source-link" href="https://zoey.day/claude-code-agent-product-page-localization" target="_blank" rel="noopener">Claude Code Agent : Product Page Localization<i class="fas fa-external-link-alt"></i></a></li>
+                        <li>2편 — <a class="source-link" href="https://zoey.day/claude-code-agent-product-page-localization-pipeline" target="_blank" rel="noopener">Pipeline 편<i class="fas fa-external-link-alt"></i></a></li>
+                        <li>3편 — <a class="source-link" href="https://zoey.day/claude-code-agent-product-page-localization-image" target="_blank" rel="noopener">Image 편<i class="fas fa-external-link-alt"></i></a></li>
+                    </ul>
+                </li>
+                <li>
+                    <strong>jay.pm.ai 의 에이전트 구성기 사례</strong> — <span class="ref-note">별도 첨부 PDF 참고</span>
+                </li>
+                <li>
+                    <strong>하네스 구성 Claude Code 플러그인</strong> :
+                    <a class="source-link" href="https://github.com/revfactory/harness" target="_blank" rel="noopener">github.com/revfactory/harness<i class="fas fa-external-link-alt"></i></a>
+                </li>
+                <li>
+                    <strong>본 프로젝트 — 카드 뉴스 생성 자동화 하네스</strong> :
+                    <a class="source-link" href="https://github.com/hyejungg/gen-card-news-harness" target="_blank" rel="noopener">github.com/hyejungg/gen-card-news-harness<i class="fas fa-external-link-alt"></i></a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- SLIDE 12: Closing -->
+<div class="slide-container" id="slide12">
+    <div class="background-pattern"></div>
+    <div class="glow-effect" style="top: 50%; left: 50%; transform: translate(-50%, -50%);"></div>
+    <div class="slide-content-wrapper">
+        <div class="content-area center-message-layout">
+            <h1 class="mega-title">감사합니다.</h1>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
+```
