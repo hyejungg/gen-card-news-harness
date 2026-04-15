@@ -1,0 +1,26 @@
+# 카드뉴스 자동화 에이전트 설정
+service_name: "my-brand"
+service_desc: "AI 시대, 실전 전략과 도구 활용 콘텐츠"
+brand_label: "AI 위클리"
+
+# 구글 시트 설정
+google_sheet:
+  # sheet id 추가
+  url: "https://docs.google.com/spreadsheets/d/SHEET_ID/edit"
+  worksheet_name: "카드뉴스 결과물"
+  creds_file: "credentials/service-account.json"
+
+# 이미지 생성 설정 (Gemini)
+image:
+  model: "gemini-2.0-flash-exp"
+  size: "1024x1024"
+
+# 카드 렌더링 설정
+card:
+  width: 1080
+  height: 1350
+
+# 자기 검증 루프 설정
+evaluation:
+  min_score: 7
+  max_retries: 3
