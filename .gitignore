@@ -1,0 +1,8 @@
+.env
+credentials/
+_workspace/
+output/
+__pycache__/
+*.pyc
+.venv/
+node_modules/
